@@ -63,10 +63,15 @@ function createDashboardState(
   dashboard: Dashboard,
   dashcards: DashboardCard[],
   selectedTabId: SelectedTabId = null,
+  requestedSubscriptionId?: DashboardSubscription["id"],
 ) {
   return createMockDashboardState({
     dashboardId: dashboard.id,
     selectedTabId,
+    sidebar: {
+      name: "sharing",
+      props: { subscriptionId: requestedSubscriptionId },
+    },
     dashcards: dashcards.reduce(
       (acc, card) => {
         acc[card.id] = card;
@@ -102,6 +107,8 @@ type SetupOpts = {
     lastName: string;
   };
   pulseListDelay?: number;
+  /** the subscription the sidebar was asked to open, as `#subscriptions=<id>` does */
+  requestedSubscriptionId?: DashboardSubscription["id"];
 };
 
 export function setup({
@@ -119,6 +126,7 @@ export function setup({
   pulses = [],
   currentUser,
   pulseListDelay = 0,
+  requestedSubscriptionId,
 }: SetupOpts = {}) {
   const dashboard = createMockDashboard({
     dashcards,
@@ -217,7 +225,12 @@ export function setup({
           last_name: currentUser?.lastName,
           is_superuser: isAdmin,
         }),
-        dashboard: createDashboardState(dashboard, dashcards, selectedTabId),
+        dashboard: createDashboardState(
+          dashboard,
+          dashcards,
+          selectedTabId,
+          requestedSubscriptionId,
+        ),
       }),
     },
   );

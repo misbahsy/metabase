@@ -2,6 +2,7 @@ import type {
   CardId,
   CollectionId,
   DashboardId,
+  DashboardSubscription,
   DatabaseId,
   ErdParams,
   FieldId,
@@ -136,6 +137,14 @@ export function dataStudioDashboardDependencies(dashboardId: DashboardId) {
 
 export function dataStudioDashboardUsage(dashboardId: DashboardId) {
   return `${dataStudioDashboard(dashboardId)}/usage`;
+}
+
+export function dataStudioDashboardSubscriptions(
+  dashboardId: DashboardId,
+  subscriptionId?: DashboardSubscription["id"],
+) {
+  const baseUrl = `${dataStudioDashboard(dashboardId)}/subscriptions`;
+  return subscriptionId != null ? `${baseUrl}/${subscriptionId}` : baseUrl;
 }
 
 export function dataStudioTable(tableId: TableId) {

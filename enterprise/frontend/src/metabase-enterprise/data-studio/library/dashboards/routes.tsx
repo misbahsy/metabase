@@ -41,6 +41,13 @@ const dashboardUsageStatsPage = () =>
     Component: DashboardUsageStatsPage,
   }));
 
+const dashboardSubscriptionsPage = () =>
+  import(
+    /* webpackChunkName: "data-studio-dashboards" */ "./pages/DashboardSubscriptionsPage"
+  ).then(({ DashboardSubscriptionsPage }) => ({
+    Component: DashboardSubscriptionsPage,
+  }));
+
 export function getDataStudioDashboardRoutes() {
   return (
     <Route path="dashboards" element={<DashboardsSectionLayout />}>
@@ -58,6 +65,14 @@ export function getDataStudioDashboardRoutes() {
       {PLUGIN_AUDIT.isEnabled && (
         <Route path=":dashboardId/usage" lazy={dashboardUsageStatsPage} />
       )}
+      <Route
+        path=":dashboardId/subscriptions"
+        lazy={dashboardSubscriptionsPage}
+      />
+      <Route
+        path=":dashboardId/subscriptions/:subscriptionId"
+        lazy={dashboardSubscriptionsPage}
+      />
     </Route>
   );
 }

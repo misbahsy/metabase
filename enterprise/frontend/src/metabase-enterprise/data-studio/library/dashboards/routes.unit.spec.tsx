@@ -5,6 +5,7 @@ import {
   setupDashboardEndpoints,
 } from "__support__/server-mocks";
 import { setupDependencyGraphEndpoint } from "__support__/server-mocks/dependencies";
+import { setupListSubscriptionsEndpoint } from "__support__/server-mocks/pulse";
 import { mockSettings } from "__support__/settings";
 import { renderWithProviders, screen, within } from "__support__/ui";
 import { ROOT_COLLECTION } from "metabase/common/collections/constants";
@@ -22,6 +23,8 @@ const DASHBOARD = createMockDashboard({ id: 10, name: "Sales overview" });
 const CONTENTS_PATH = "/data-studio/dashboards/10/contents";
 const DEPENDENCIES_PATH = "/data-studio/dashboards/10/dependencies";
 const USAGE_PATH = "/data-studio/dashboards/10/usage";
+const SUBSCRIPTIONS_PATH = "/data-studio/dashboards/10/subscriptions";
+const SUBSCRIPTION_PATH = "/data-studio/dashboards/10/subscriptions/1";
 const AUDIT_DASHBOARD = createMockDashboard({
   id: 201,
   name: "Dashboard overview",
@@ -35,6 +38,7 @@ type SetupOpts = {
 function setup({ initialRoute, hasUsageAnalyticsAccess = true }: SetupOpts) {
   setupDashboardEndpoints(DASHBOARD);
   setupDashboardEndpoints(AUDIT_DASHBOARD);
+  setupListSubscriptionsEndpoint([]);
   setupAuditInfoEndpoint({
     auditInfo: hasUsageAnalyticsAccess
       ? { dashboard_overview: AUDIT_DASHBOARD.id }
@@ -89,6 +93,21 @@ describe("Data Studio dashboard routes without plugins", () => {
 
     expect(await screen.findByText("No route matched")).toBeInTheDocument();
   });
+
+  it.each([SUBSCRIPTIONS_PATH, SUBSCRIPTION_PATH])(
+    "renders the Subscriptions page with its tab selected at %s",
+    async (initialRoute) => {
+      setup({ initialRoute });
+
+      expect(
+        await screen.findByTestId("dashboard-subscriptions-page"),
+      ).toBeInTheDocument();
+      const header = screen.getByTestId("dashboard-pane-header");
+      expect(
+        within(header).getByRole("link", { name: "Subscriptions" }),
+      ).toHaveAttribute("aria-current", "page");
+    },
+  );
 });
 
 describe("Data Studio dashboard routes with the dependencies plugin", () => {
@@ -130,7 +149,7 @@ describe("Data Studio dashboard routes with the audit app plugin", () => {
     setupEnterpriseOnlyPlugin("audit_app");
   });
 
-  it("puts the Usage stats tab after Dependencies", async () => {
+  it("puts the Usage stats tab between Dependencies and Subscriptions", async () => {
     setup({ initialRoute: CONTENTS_PATH });
 
     const header = await screen.findByTestId("dashboard-pane-header");
@@ -142,7 +161,13 @@ describe("Data Studio dashboard routes with the audit app plugin", () => {
       within(within(header).getByRole("navigation"))
         .getAllByRole("link")
         .map((link) => link.getAttribute("aria-label")),
-    ).toEqual(["Overview", "Contents", "Dependencies", "Usage stats"]);
+    ).toEqual([
+      "Overview",
+      "Contents",
+      "Dependencies",
+      "Usage stats",
+      "Subscriptions",
+    ]);
   });
 
   it("hides the Usage stats tab without access to Usage analytics", async () => {

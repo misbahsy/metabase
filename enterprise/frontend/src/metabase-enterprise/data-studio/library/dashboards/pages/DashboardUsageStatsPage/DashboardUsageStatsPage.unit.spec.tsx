@@ -6,6 +6,7 @@ import {
   setupDashboardEndpoints,
 } from "__support__/server-mocks";
 import { setupDashcardQueryEndpoints } from "__support__/server-mocks/dashcard";
+import { setupListSubscriptionsEndpoint } from "__support__/server-mocks/pulse";
 import { renderWithProviders, screen, within } from "__support__/ui";
 import { ROOT_COLLECTION } from "metabase/common/collections/constants";
 import { Route } from "metabase/router";
@@ -95,6 +96,7 @@ function setup({
   setupCollectionByIdEndpoint({
     collections: [createMockCollection(ROOT_COLLECTION)],
   });
+  setupListSubscriptionsEndpoint([]);
   setupAuditInfoEndpoint({
     auditInfo: hasUsageAnalyticsAccess
       ? { dashboard_overview: AUDIT_DASHBOARD_ID }

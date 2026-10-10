@@ -12,8 +12,10 @@ import { useFavicon } from "metabase/common/hooks/use-favicon";
 import CS from "metabase/css/core/index.css";
 import {
   addCardToDashboard,
+  editSubscriptionInSidebar,
   navigateToNewCardFromDashboard,
   setEditingDashboard,
+  setSharing,
   toggleSidebar,
 } from "metabase/dashboard/actions";
 import { Dashboard } from "metabase/dashboard/components/Dashboard/Dashboard";
@@ -131,6 +133,7 @@ export const DashboardApp = () => {
       window.location.hash,
     );
     const editingOnLoad = options.edit;
+    const subscriptionsOnLoad = options.subscriptions;
     const addCardOnLoad = options.add != null ? Number(options.add) : undefined;
     const isEditingLibraryDashboardOutsideDataStudio =
       (editingOnLoad || addCardOnLoad != null) &&
@@ -145,6 +148,15 @@ export const DashboardApp = () => {
       if (editingOnLoad) {
         dispatch(setEditingDashboard(dashboard));
         options = await extractHashOption("edit", options);
+      }
+
+      if (subscriptionsOnLoad) {
+        dispatch(
+          typeof subscriptionsOnLoad === "number"
+            ? editSubscriptionInSidebar(subscriptionsOnLoad)
+            : setSharing(true),
+        );
+        options = await extractHashOption("subscriptions", options);
       }
 
       if (addCardOnLoad != null && dashboardId != null) {

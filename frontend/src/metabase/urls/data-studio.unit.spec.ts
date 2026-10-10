@@ -3,6 +3,7 @@ import {
   dataStudioDashboard,
   dataStudioDashboardContents,
   dataStudioDashboardDependencies,
+  dataStudioDashboardSubscriptions,
   dataStudioDashboardUsage,
   dataStudioDashboards,
   dataStudioData,
@@ -135,6 +136,12 @@ describe("urls > data-studio", () => {
       );
       expect(dataStudioDashboardUsage(7)).toBe(
         "/data-studio/dashboards/7/usage",
+      );
+      expect(dataStudioDashboardSubscriptions(7)).toBe(
+        "/data-studio/dashboards/7/subscriptions",
+      );
+      expect(dataStudioDashboardSubscriptions(7, 3)).toBe(
+        "/data-studio/dashboards/7/subscriptions/3",
       );
     });
   });

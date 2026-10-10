@@ -1,6 +1,6 @@
 import { t } from "ttag";
 
-import { skipToken } from "metabase/api";
+import { skipToken, useListSubscriptionsQuery } from "metabase/api";
 import {
   type PillTab,
   PillTabNavigation,
@@ -18,7 +18,11 @@ export function DashboardTabs({ dashboardId }: DashboardTabsProps) {
   const { data: auditInfo } = useGetAuditInfoQuery(
     PLUGIN_AUDIT.isEnabled ? undefined : skipToken,
   );
+  const { data: subscriptions } = useListSubscriptionsQuery({
+    dashboard_id: dashboardId,
+  });
   const contentsUrl = Urls.dataStudioDashboardContents(dashboardId);
+  const subscriptionsUrl = Urls.dataStudioDashboardSubscriptions(dashboardId);
   const tabs: PillTab[] = [
     { label: t`Overview`, to: Urls.dataStudioDashboard(dashboardId) },
     {
@@ -41,6 +45,13 @@ export function DashboardTabs({ dashboardId }: DashboardTabsProps) {
       to: Urls.dataStudioDashboardUsage(dashboardId),
     });
   }
+
+  tabs.push({
+    label: t`Subscriptions`,
+    to: subscriptionsUrl,
+    count: subscriptions?.length,
+    isSelected: (pathname) => pathname.startsWith(subscriptionsUrl),
+  });
 
   return <PillTabNavigation tabs={tabs} />;
 }

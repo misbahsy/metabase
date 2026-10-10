@@ -25,6 +25,7 @@ import type {
   ClickBehaviorSidebarState,
   EditParameterSidebarState,
   EventsSidebarState,
+  SharingSidebarState,
   State,
   StoreDashboard,
   StoreDashcard,
@@ -86,6 +87,18 @@ function isEventsSidebar(sidebar: SidebarState): sidebar is EventsSidebarState {
 export const getEventsSidebarProps = (state: State) => {
   const { sidebar } = state.dashboard;
   return isEventsSidebar(sidebar) ? sidebar.props : null;
+};
+
+function isSharingSidebar(
+  sidebar: SidebarState,
+): sidebar is SharingSidebarState {
+  return sidebar.name === SIDEBAR_NAME.sharing;
+}
+
+/** The subscription the sidebar should open for editing, if one was requested. */
+export const getSharingSubscriptionId = (state: State) => {
+  const { sidebar } = state.dashboard;
+  return isSharingSidebar(sidebar) ? sidebar.props.subscriptionId : undefined;
 };
 
 function isEditParameterSidebar(

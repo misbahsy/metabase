@@ -13,8 +13,12 @@ import {
   setupDatabasesEndpoints,
   setupSearchEndpoints,
   setupTableEndpoints,
+  setupUserRecipientsEndpoint,
 } from "__support__/server-mocks";
-import { setupNotificationChannelsEndpoints } from "__support__/server-mocks/pulse";
+import {
+  setupListSubscriptionsEndpoint,
+  setupNotificationChannelsEndpoints,
+} from "__support__/server-mocks/pulse";
 import { mockSettings } from "__support__/settings";
 import { createMockDashboardState } from "__support__/state";
 import { createMockEntitiesState } from "__support__/store";
@@ -26,16 +30,19 @@ import {
 } from "__support__/ui";
 import { getBeforeUnloadUnsavedMessage } from "metabase/common/hooks/use-before-unload";
 import { DashboardApp } from "metabase/dashboard/containers/DashboardApp/DashboardApp";
+import { getIsSharing } from "metabase/dashboard/selectors";
 import { Route } from "metabase/router";
 import { defer } from "metabase/utils/promise";
 import { checkNotNull } from "metabase/utils/types";
 import type { Dashboard } from "metabase-types/api";
 import {
   createMockCard,
+  createMockChannel,
   createMockCollection,
   createMockCollectionItem,
   createMockDashboard,
   createMockDashboardQueryMetadata,
+  createMockDashboardSubscription,
   createMockDatabase,
   createMockHeadingDashboardCard,
   createMockTable,
@@ -64,12 +71,14 @@ interface Options {
   slug?: string;
   /** Holds the query metadata response until `resolveQueryMetadata` is called. */
   deferQueryMetadata?: boolean;
+  channels?: Parameters<typeof setupNotificationChannelsEndpoints>[0];
 }
 
 function renderDashboardApp({
   dashboard,
   slug,
   deferQueryMetadata = false,
+  channels = {},
 }: Options = {}) {
   const mockDashboard = createMockDashboard(dashboard);
   const dashboardId = mockDashboard.id;
@@ -78,7 +87,7 @@ function renderDashboardApp({
   });
   const queryMetadataRequest = defer();
 
-  setupNotificationChannelsEndpoints({});
+  setupNotificationChannelsEndpoints(channels);
 
   setupDatabasesEndpoints([TEST_DATABASE_WITH_ACTIONS]);
   setupDashboardEndpoints(mockDashboard);
@@ -297,6 +306,55 @@ describe("DashboardApp", () => {
     expect(queryMetadataSearchParams.get("dashboard_load_id")).toEqual(
       dashboardSearchParams.get("dashboard_load_id"),
     );
+  });
+
+  describe("subscriptions hash", () => {
+    afterEach(() => {
+      window.location.hash = "";
+    });
+
+    it("opens the subscriptions sidebar when the URL asks for it", async () => {
+      // DashboardApp reads hash options from window.location, which the memory router does not set
+      window.location.hash = "#subscriptions";
+      setupListSubscriptionsEndpoint([]);
+      setupUserRecipientsEndpoint({ users: [] });
+      const { store } = await setup();
+
+      expect(getIsSharing(store.getState())).toBe(true);
+    });
+
+    it("opens the edit form of the subscription named in the URL", async () => {
+      window.location.hash = "#subscriptions=12";
+      setupListSubscriptionsEndpoint([
+        createMockDashboardSubscription({
+          id: 12,
+          channels: [createMockChannel({ schedule_type: "hourly" })],
+        }),
+      ]);
+      setupUserRecipientsEndpoint({ users: [] });
+      await setup({
+        channels: {
+          email: {
+            type: "email",
+            name: "Email",
+            configured: true,
+            allows_recipients: true,
+            recipients: ["user", "email"],
+            schedules: ["hourly", "daily", "weekly", "monthly"],
+          },
+        },
+      });
+
+      expect(
+        await screen.findByText("Email this dashboard"),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the subscriptions sidebar closed otherwise", async () => {
+      const { store } = await setup();
+
+      expect(getIsSharing(store.getState())).toBe(false);
+    });
   });
 
   it("should show the error page instead of an endless loader for a non-numeric slug (metabase#78725)", async () => {
