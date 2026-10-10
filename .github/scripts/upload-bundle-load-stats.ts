@@ -36,8 +36,6 @@ interface Condition {
   totalKb: number;
   runs: number;
   cpuModel: string;
-  stealPercent: number;
-  cpuPressurePercent: number;
   calibrationMs: number;
 }
 
@@ -94,8 +92,6 @@ function buildRows(
     "Total kb": condition.totalKb,
     Runs: condition.runs,
     "CPU model": condition.cpuModel,
-    "Steal %": condition.stealPercent,
-    "CPU pressure %": condition.cpuPressurePercent,
     "Calibration ms": condition.calibrationMs,
   }));
 }
