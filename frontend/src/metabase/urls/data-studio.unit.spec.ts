@@ -3,6 +3,7 @@ import {
   dataStudioDashboard,
   dataStudioDashboardContents,
   dataStudioDashboardDependencies,
+  dataStudioDashboardUsage,
   dataStudioDashboards,
   dataStudioData,
   dataStudioDataModelSegment,
@@ -124,13 +125,16 @@ describe("urls > data-studio", () => {
   });
 
   describe("dataStudioDashboard", () => {
-    it("should return the dashboard overview, contents, and dependencies URLs", () => {
+    it("should return the dashboard tab URLs", () => {
       expect(dataStudioDashboard(7)).toBe("/data-studio/dashboards/7");
       expect(dataStudioDashboardContents(7)).toBe(
         "/data-studio/dashboards/7/contents",
       );
       expect(dataStudioDashboardDependencies(7)).toBe(
         "/data-studio/dashboards/7/dependencies",
+      );
+      expect(dataStudioDashboardUsage(7)).toBe(
+        "/data-studio/dashboards/7/usage",
       );
     });
   });

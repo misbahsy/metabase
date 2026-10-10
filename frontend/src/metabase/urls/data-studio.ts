@@ -134,6 +134,10 @@ export function dataStudioDashboardDependencies(dashboardId: DashboardId) {
   return `${dataStudioDashboard(dashboardId)}/dependencies`;
 }
 
+export function dataStudioDashboardUsage(dashboardId: DashboardId) {
+  return `${dataStudioDashboard(dashboardId)}/usage`;
+}
+
 export function dataStudioTable(tableId: TableId) {
   return `${dataStudioLibrary()}/tables/${tableId}`;
 }

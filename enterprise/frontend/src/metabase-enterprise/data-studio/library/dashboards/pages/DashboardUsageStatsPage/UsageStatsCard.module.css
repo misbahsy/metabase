@@ -1,0 +1,10 @@
+.card {
+  & :global(.CardVisualization) {
+    padding: 0;
+  }
+}
+
+.card,
+.card * {
+  cursor: default !important;
+}
