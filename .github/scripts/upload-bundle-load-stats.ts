@@ -37,6 +37,12 @@ interface Condition {
   runs: number;
   cpuModel: string;
   calibrationMs: number;
+  referenceColdMs?: number;
+  referenceColdTtfbMs?: number;
+  referenceColdLargestPaintMs?: number;
+  referenceWarmMs?: number;
+  referenceSteadyMs?: number;
+  referenceTotalKb?: number;
 }
 
 interface CommitStamp {
@@ -93,6 +99,13 @@ function buildRows(
     Runs: condition.runs,
     "CPU model": condition.cpuModel,
     "Calibration ms": condition.calibrationMs,
+    "Reference cold ms": condition.referenceColdMs ?? "",
+    "Reference cold ttfb ms": condition.referenceColdTtfbMs ?? "",
+    "Reference cold largest paint ms":
+      condition.referenceColdLargestPaintMs ?? "",
+    "Reference warm ms": condition.referenceWarmMs ?? "",
+    "Reference steady ms": condition.referenceSteadyMs ?? "",
+    "Reference total kb": condition.referenceTotalKb ?? "",
   }));
 }
 

@@ -84,6 +84,11 @@ jobs:
       # Measured in this order, so the translated reading comes from the same
       # state the instance is set up in.
       LOCALES: "de en"
+      # A release, so it never expires and never changes. Every reading of the
+      # measured commit gets the same reading of this jar from the same runner
+      # beside it, and the ratio of the two is what compares across runners.
+      REFERENCE_JAR: https://downloads.metabase.com/enterprise/v1.64.1/metabase.jar
+      REFERENCE_SITE: http://localhost:4001
     steps:
       - name: Check out the code
         uses: actions/checkout@v7
@@ -117,6 +122,13 @@ jobs:
           MB_DB_FILE="${RUNNER_TEMP}/bench.db" \
             nohup java --add-opens java.base/java.nio=ALL-UNNAMED \
             -jar temp/uberjar/metabase.jar > artifacts/metabase.log 2>&1 &
+      - name: Start the reference Metabase
+        run: |
+          mkdir -p temp/reference
+          curl -sSfL --retry 3 -o temp/reference/metabase.jar "$REFERENCE_JAR"
+          MB_JETTY_PORT=4001 MB_DB_FILE="${RUNNER_TEMP}/reference.db" \
+            nohup java --add-opens java.base/java.nio=ALL-UNNAMED \
+            -jar temp/reference/metabase.jar > artifacts/reference.log 2>&1 &
       - name: Sign in
         run: |
           # Waits for the instance to migrate and come up, then creates the
@@ -124,14 +136,25 @@ jobs:
           session=$(bun frontend/test/bench/sign-in.ts "$SITE")
           echo "::add-mask::$session"
           echo "SESSION_COOKIE=$session" >> "$GITHUB_ENV"
+          reference=$(bun frontend/test/bench/sign-in.ts "$REFERENCE_SITE")
+          echo "::add-mask::$reference"
+          echo "REFERENCE_SESSION_COOKIE=$reference" >> "$GITHUB_ENV"
+          # The reference is always measured in English.
+          curl -sS -X PUT -o /dev/null \
+            -H "X-Metabase-Session: ${reference}" \
+            -H "content-type: application/json" \
+            -d '{"value":"en"}' \
+            "$REFERENCE_SITE/api/setting/site-locale"
       - name: Warm the backend
         run: |
           # The first document a fresh JVM renders pays for its own JIT. Spend
           # that here rather than inside the first condition measured.
           for _ in 1 2 3 4 5; do curl -sS -o /dev/null "$SITE/"; done
+          for _ in 1 2 3 4 5; do curl -sS -o /dev/null "$REFERENCE_SITE/"; done
       - name: Measure load times
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          REFERENCE_URL: ${{ env.REFERENCE_SITE }}/
         run: |
           # The site locale decides which translation catalogue the document
           # carries, and a user with no locale of their own falls back to it.
@@ -150,7 +173,9 @@ jobs:
           done
       - name: Show the Metabase log if something went wrong
         if: failure()
-        run: tail -100 artifacts/metabase.log || true
+        run: |
+          tail -100 artifacts/metabase.log || true
+          tail -40 artifacts/reference.log || true
       - name: Resolve the commit stamp
         if: ${{ inputs.commit != '' }}
         env:

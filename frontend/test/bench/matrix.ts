@@ -47,7 +47,14 @@ interface Series {
   calibrationMs: number;
 }
 
+/** Where to load the page from, and as whom. */
+interface Site {
+  url: string;
+  sessionCookie: string;
+}
+
 interface Conditions {
+  site: Site;
   mbps: number;
   latency: number;
   throttle: number;
@@ -59,6 +66,18 @@ interface Conditions {
 
 const url = process.argv[2];
 const runs = Number(process.argv[3] || 8);
+
+const subject: Site = { url, sessionCookie: process.env.SESSION_COOKIE || "" };
+/**
+ * A fixed build measured beside the subject, condition by condition, so each of
+ * its readings comes from the same runner in the same minutes.
+ */
+const reference: Site | null = process.env.REFERENCE_URL
+  ? {
+      url: process.env.REFERENCE_URL,
+      sessionCookie: process.env.REFERENCE_SESSION_COOKIE || "",
+    }
+  : null;
 
 if (!url) {
   console.error("usage: bun matrix.ts <url> [runs]");
@@ -95,6 +114,7 @@ const WARM_PROFILES = 3;
 const WARM_LOADS = 3;
 
 function measure({
+  site,
   mbps,
   latency,
   throttle,
@@ -107,13 +127,14 @@ function measure({
       process.execPath,
       [
         path.join(import.meta.dirname, "measure.ts"),
-        url,
+        site.url,
         String(loads ?? runs),
       ],
       {
         stdio: ["ignore", "pipe", "inherit"],
         env: {
           ...process.env,
+          SESSION_COOKIE: site.sessionCookie,
           NETWORK_MBPS: String(mbps),
           NETWORK_LATENCY: String(latency),
           CPU_THROTTLE: String(throttle),
@@ -201,24 +222,38 @@ function spreadPercent(values: number[]) {
       const { mbps, latency } = NETWORKS[network];
       const throttle = CPUS[cpu];
 
+      const shape = { mbps, latency, throttle };
+      // The reference goes first in each pair, so the two are minutes apart at
+      // most and a runner that slows down mid-job slows both.
+      const referenceCold = reference
+        ? await measure({
+            ...shape,
+            site: reference,
+            warm: false,
+            offset: offset++,
+          })
+        : null;
       const cold = await measure({
-        mbps,
-        latency,
-        throttle,
+        ...shape,
+        site: subject,
         warm: false,
         offset: offset++,
       });
+      const referenceWarmBatch = [];
       const warmBatch = [];
       for (let profile = 0; profile < WARM_PROFILES; profile++) {
+        const warmSeries = { ...shape, warm: true, loads: WARM_LOADS };
+        if (reference) {
+          referenceWarmBatch.push(
+            await measure({
+              ...warmSeries,
+              site: reference,
+              offset: offset++,
+            }),
+          );
+        }
         warmBatch.push(
-          await measure({
-            mbps,
-            latency,
-            throttle,
-            warm: true,
-            offset: offset++,
-            loads: WARM_LOADS,
-          }),
+          await measure({ ...warmSeries, site: subject, offset: offset++ }),
         );
       }
 
@@ -284,6 +319,25 @@ function spreadPercent(values: number[]) {
         runs: cold.runs,
         cpuModel,
         calibrationMs: calibrations[Math.floor(calibrations.length / 2)],
+        ...(referenceCold && {
+          referenceColdMs: referenceCold.median.domContentLoadedMs,
+          referenceColdTtfbMs: referenceCold.median.ttfbMs,
+          referenceColdLargestPaintMs:
+            referenceCold.median.largestContentfulPaintMs,
+          referenceWarmMs: required(
+            representativeSeries(referenceWarmBatch, (series) =>
+              required(series.secondLoad, "secondLoad"),
+            ).secondLoad,
+            "secondLoad",
+          ).domContentLoadedMs,
+          referenceSteadyMs: required(
+            representativeSeries(referenceWarmBatch, (series) =>
+              required(series.steady, "steady"),
+            ).steady,
+            "steady",
+          ).domContentLoadedMs,
+          referenceTotalKb: referenceCold.totalKb,
+        }),
       });
 
       console.error(`measured ${cpu} cpu on a ${network} network`);
